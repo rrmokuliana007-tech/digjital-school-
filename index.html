@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shkolla Digjitale - Learn Through Play</title>
+<style>
+/* ===== RESET & BASE ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#0a0020 0%,#0d1b3e 30%,#1a0a2e 60%,#0a1a2e 100%);color:#f0e6ff;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 20% 50%,rgba(168,85,247,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(0,212,255,.06) 0%,transparent 50%),radial-gradient(ellipse at 50% 80%,rgba(240,185,11,.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+/* ===== SCREEN SYSTEM ===== */
+.screen{display:none;min-height:100vh;padding:20px}
+.screen.active{display:flex;flex-direction:column;align-items:center}
+
+/* ===== ANIMATED BG ===== */
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.screen.active{position:relative;z-index:1}
+
+/* ===== TITLE ===== */
+#title-screen{justify-content:center;text-align:center}
+.title-logo{font-size:clamp(2.2rem,7vw,4.5rem);font-weight:900;background:linear-gradient(135deg,#f0b90b,#ff6b35,#00d4ff,#a855f7);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradientShift 4s ease infinite;margin-bottom:8px}
+@keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.title-sub{font-size:1.1rem;color:#8899aa;margin-bottom:30px;letter-spacing:3px}
+.title-btn{padding:16px 48px;font-size:1.2rem;font-weight:700;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,#f0b90b,#ff6b35);color:#0a0e1a;transition:all .3s;margin:10px;letter-spacing:1px}
+.title-btn:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(240,185,11,.3)}
+.title-btn.secondary{background:transparent;border:2px solid #f0b90b;color:#f0b90b}
+.title-btn.secondary:hover{background:rgba(240,185,11,.1)}
+
+/* ===== CHARACTER SELECT ===== */
+.char-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;max-width:800px;width:100%;margin:15px 0}
+.char-card{background:linear-gradient(145deg,#141a2e,#1a2238);border:2px solid #2a3350;border-radius:20px;padding:20px 12px;cursor:pointer;text-align:center;transition:all .3s}
+.char-card:hover{transform:translateY(-5px);border-color:#f0b90b;box-shadow:0 10px 30px rgba(240,185,11,.15)}
+.char-card.selected{border-color:#f0b90b;box-shadow:0 0 30px rgba(240,185,11,.3);background:linear-gradient(145deg,#1a1e32,#1f2840)}
+.char-card svg{width:80px;height:80px;margin-bottom:8px}
+.char-card .char-name{font-size:1.2rem;font-weight:700;color:#f0b90b}
+.char-card .char-desc{font-size:.8rem;color:#8899aa;margin-top:4px}
+.char-card .char-power{font-size:.7rem;color:#ff6b35;margin-top:3px;font-style:italic}
+
+/* ===== SECTION HEADERS ===== */
+.section-title{font-size:1.8rem;font-weight:800;color:#f0b90b;text-align:center;margin:12px 0}
+.section-sub{color:#8899aa;text-align:center;margin-bottom:16px;font-size:.95rem}
+
+/* ===== CHAT / Q&A SCREEN ===== */
+#chat-screen{max-width:700px;margin:0 auto}
+.chat-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;justify-content:center}
+.chat-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+.chat-messages{width:100%;max-height:55vh;overflow-y:auto;padding:12px;background:rgba(20,26,46,.5);border-radius:16px;border:1px solid #2a3350;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;min-height:200px}
+.chat-msg{display:flex;gap:10px;animation:msgIn .3s ease}
+@keyframes msgIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+.chat-msg.user{flex-direction:row-reverse}
+.chat-msg .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;flex-grow:0}
+.chat-msg .bubble{padding:12px 16px;border-radius:16px;max-width:80%;line-height:1.5;font-size:.95rem}
+.chat-msg.user .bubble{background:linear-gradient(135deg,#f0b90b,#e6951a);color:#0a0e1a;border-bottom-right-radius:4px}
+.chat-msg.guide .bubble{background:#141a2e;border:1px solid #2a3350;border-bottom-left-radius:4px}
+.chat-msg.system .bubble{background:rgba(0,212,255,.1);border:1px solid #00d4ff;text-align:center;width:100%;max-width:100%;font-weight:700;font-size:.9rem}
+.chat-input-row{display:flex;gap:8px;width:100%}
+.chat-input{flex:1;background:#141a2e;border:2px solid #3a4560;border-radius:50px;padding:14px 20px;font-size:1rem;color:#fff;outline:none}
+.chat-input:focus{border-color:#f0b90b}
+.chat-send{padding:14px 24px;border-radius:50px;background:linear-gradient(135deg,#f0b90b,#ff6b35);color:#0a0e1a;border:none;font-weight:700;cursor:pointer;font-size:1rem;white-space:nowrap}
+.chat-send:disabled{opacity:.5;cursor:default}
+.chat-accept{display:inline-block;padding:10px 22px;border-radius:50px;background:#10b981;color:#fff;border:none;font-weight:700;cursor:pointer;font-size:.9rem;margin-top:4px;transition:all .2s}
+.chat-accept:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(16,185,129,.3)}
+
+/* ===== GAME HUB ===== */
+.hub-top{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:center;margin:10px 0}
+.stat-badge{background:#141a2e;border:1px solid #2a3350;border-radius:12px;padding:10px 20px;display:flex;align-items:center;gap:8px;font-weight:700}
+.stat-badge .stat-icon{font-size:1.3rem}
+.stat-badge .stat-val{color:#f0b90b;font-size:1.2rem}
+.level-bar{background:#2a3350;border-radius:10px;height:12px;width:200px;overflow:hidden}
+.level-bar-fill{height:100%;background:linear-gradient(90deg,#f0b90b,#ff6b35);border-radius:10px;transition:width .5s}
+.level-label{font-size:.85rem;color:#8899aa}
+
+/* ===== GAME AREA ===== */
+.game-area{background:linear-gradient(145deg,#141a2e,#1a2238);border:2px solid #2a3350;border-radius:20px;padding:30px;max-width:800px;width:100%;margin:15px 0;min-height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+
+/* ===== MEMORY ===== */
+.memory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:500px}
+.memory-card{aspect-ratio:1;background:linear-gradient(135deg,#1a2238,#2a3350);border:2px solid #3a4560;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:2rem;transition:all .3s;user-select:none}
+.memory-card.flipped{background:linear-gradient(135deg,#f0b90b,#ff6b35);border-color:#f0b90b;transform:scale(1.05)}
+.memory-card.matched{background:linear-gradient(135deg,#059669,#10b981);border-color:#10b981;cursor:default;opacity:.8}
+
+/* ===== MAZE ===== */
+#maze-canvas{border-radius:12px;background:#0a0e1a;max-width:100%}
+.maze-dpad{display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px;gap:4px;margin-top:15px;justify-content:center}
+.dpad-btn{background:#1a2238;border:2px solid #3a4560;border-radius:12px;font-size:1.5rem;cursor:pointer;color:#e0e0e0;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.dpad-btn:active{background:#f0b90b;color:#0a0e1a;transform:scale(.9)}
+
+/* ===== TYPING ===== */
+.typing-word{font-size:2.5rem;font-weight:900;color:#f0b90b;margin:20px 0;letter-spacing:2px;transition:color .2s}
+.typing-input{background:#141a2e;border:2px solid #3a4560;border-radius:12px;padding:14px 20px;font-size:1.3rem;color:#fff;text-align:center;width:100%;max-width:400px;outline:none}
+.typing-input:focus{border-color:#f0b90b}
+.typing-timer{font-size:3rem;font-weight:900;color:#ff6b35;margin:10px 0}
+
+/* ===== FIND LAPTOP ===== */
+.find-container{position:relative;width:100%;max-width:700px;height:400px;background:linear-gradient(145deg,#0a0e1a,#141a2e);border-radius:16px;overflow:hidden;cursor:crosshair}
+.find-laptop-el{position:absolute;font-size:2.5rem;cursor:pointer;z-index:2;transition:all .3s;animation:laptopPulse 2s ease infinite}
+@keyframes laptopPulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+
+/* ===== MATCH ICONS ===== */
+.match-container{display:flex;gap:40px;flex-wrap:wrap;justify-content:center}
+.match-column{display:flex;flex-direction:column;gap:10px}
+.match-item{background:#1a2238;border:2px solid #2a3350;border-radius:12px;padding:14px 20px;cursor:pointer;text-align:center;font-size:1.5rem;transition:all .2s;min-width:120px;display:flex;align-items:center;gap:10px;user-select:none}
+.match-item:hover{border-color:#f0b90b}
+.match-item.selected{border-color:#00d4ff;background:#1a2838;box-shadow:0 0 20px rgba(0,212,255,.2)}
+.match-item.matched{border-color:#10b981;background:#0a2a1a;cursor:default;opacity:.7}
+
+/* ===== OVERLAYS ===== */
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center}
+.overlay-box{background:linear-gradient(145deg,#141a2e,#1a2238);border:2px solid #f0b90b;border-radius:24px;padding:36px;text-align:center;max-width:520px;width:90%;animation:popIn .4s ease;max-height:90vh;overflow-y:auto}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}
+.overlay-emoji{font-size:5rem;margin-bottom:12px}
+.overlay-title{font-size:1.8rem;font-weight:900;color:#f0b90b;margin-bottom:8px}
+.overlay-sub{color:#10b981;font-size:1.2rem;margin:8px 0}
+.overlay-answer{background:#0a0e1a;border-radius:12px;padding:20px;margin:12px 0;color:#e0e0e0;line-height:1.6;text-align:left;max-height:250px;overflow-y:auto;font-size:.95rem}
+.particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:201}
+
+/* ===== BUTTON BAR ===== */
+.btn-bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:10px 0}
+.btn{padding:12px 28px;border-radius:50px;font-weight:700;cursor:pointer;border:none;font-size:1rem;transition:all .3s}
+.btn-primary{background:linear-gradient(135deg,#f0b90b,#ff6b35);color:#0a0e1a}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(240,185,11,.3)}
+.btn-secondary{background:transparent;border:2px solid #3a4560;color:#e0e0e0}
+.btn-secondary:hover{border-color:#f0b90b;color:#f0b90b}
+.btn-small{padding:8px 18px;font-size:.85rem}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal-box{background:linear-gradient(145deg,#141a2e,#1a2238);border:2px solid #f0b90b;border-radius:20px;padding:28px;max-width:420px;width:90%;text-align:center;animation:popIn .3s ease}
+.modal-box h3{color:#f0b90b;margin-bottom:10px;font-size:1.3rem}
+.modal-box p{color:#8899aa;margin-bottom:14px;font-size:.9rem}
+.modal-input{background:#0a0e1a;border:2px solid #3a4560;border-radius:12px;padding:12px 16px;font-size:1.1rem;color:#fff;width:100%;text-align:center;outline:none;margin-bottom:14px}
+.modal-input:focus{border-color:#f0b90b}
+.modal-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* ===== LEADERBOARD & BADGES ===== */
+.leaderboard-table{width:100%;max-width:600px;border-collapse:collapse;margin:15px 0}
+.leaderboard-table th{background:#141a2e;color:#f0b90b;padding:12px;text-align:left;border-bottom:2px solid #2a3350}
+.leaderboard-table td{padding:12px;border-bottom:1px solid #1a2238}
+.leaderboard-table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+.rank-1{color:#f0b90b;font-weight:900}.rank-2{color:#c0c0c0;font-weight:700}.rank-3{color:#cd7f32;font-weight:700}
+.badge-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:15px 0}
+.badge-item{background:#141a2e;border:2px solid #2a3350;border-radius:16px;padding:18px;text-align:center;width:140px;transition:all .3s}
+.badge-item.earned{border-color:#f0b90b;background:linear-gradient(145deg,#1a1e32,#1f2840)}
+.badge-item.locked{opacity:.4;filter:grayscale(1)}
+.badge-emoji{font-size:2.5rem;display:block;margin-bottom:6px}
+.badge-name{font-size:.85rem;font-weight:700;color:#e0e0e0}
+.badge-status{font-size:.7rem;margin-top:3px}
+.char-display{display:flex;align-items:center;gap:10px;background:#141a2e;border-radius:16px;padding:8px 18px;font-size:.9rem}
+.char-display svg{width:36px;height:36px}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:600px){
+  .memory-grid{grid-template-columns:repeat(3,1fr)}
+  .char-grid{grid-template-columns:repeat(2,1fr)}
+  .game-area{padding:15px}
+  .chat-messages{max-height:40vh}
+}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<!-- ===== TITLE SCREEN ===== -->
+<div class="screen active" id="title-screen">
+  <h1 class="title-logo">SHKOLLA DIGJITALE</h1>
+  <p class="title-sub">🌟 MADE BY LIANA 🌟</p>
+  <p style="color:#a78bfa;margin-bottom:20px;font-size:.9rem">🔐 UNLOCK KNOWLEDGE THROUGH PLAY</p>
+  <button class="title-btn" onclick="showNameModal()">🎮 START LEARNING</button>
+  <button class="title-btn secondary" onclick="showScreen('leaderboard-screen');renderLeaderboard()">🏆 LEADERBOARD</button>
+</div>
+
+<!-- ===== CHARACTER SELECT ===== -->
+<div class="screen" id="char-screen">
+  <h2 class="section-title">Choose Your Guide</h2>
+  <p class="section-sub">Each character has a unique personality! Pick your learning companion.</p>
+  <div class="char-grid" id="char-grid"></div>
+  <div class="btn-bar">
+    <button class="btn btn-secondary" onclick="showScreen('title-screen')">← Back</button>
+    <button class="btn btn-primary" id="char-confirm" onclick="confirmCharacter()" disabled>Confirm & Continue →</button>
+  </div>
+</div>
+
+<!-- ===== CHAT / Q&A SCREEN ===== -->
+<div class="screen" id="chat-screen">
+  <div class="chat-header">
+    <div class="chat-avatar" id="chat-avatar-icon" style="background:rgba(240,185,11,.2)">☀️</div>
+    <div>
+      <strong style="color:#f0b90b" id="chat-char-name">Sunny</strong>
+      <div style="color:#8899aa;font-size:.8rem" id="chat-char-title">Your Shkolla Digjitale Guide</div>
+    </div>
+    <div style="margin-left:auto;background:rgba(240,185,11,.15);border-radius:20px;padding:6px 14px;font-weight:700;font-size:.9rem" id="token-display">🎫 ×1</div>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg guide">
+      <div class="avatar">☀️</div>
+      <div class="bubble">🇽🇰 Hej <b>Liana</b>! Mirë se vjen në <b>Shkollën Digjitale</b> — shkolla më e mirë e programimit në Kosovë për moshat 8-18! 💜<br><br>Ti ke <b>1 pyetje falas</b> 🎫 — pyet çfarë të duash rreth shkollës, kurseve, lokacioneve, themeluesve ose programit mësimor!<br><br>Kur të mbarojnë token-at, luaj një mini-lojë për të fituar më shumë. Moto: <b>"Improvise CODE Overcome"</b> 🚀</div>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" placeholder="Ask a question about Digital School..." onkeydown="if(event.key==='Enter')askQuestion()">
+    <button class="chat-send" id="chat-send-btn" onclick="askQuestion()">Ask 🚀</button>
+  </div>
+  <div class="btn-bar" style="margin-top:12px">
+    <button class="btn btn-secondary btn-small" onclick="showScreen('char-screen')">🔄 Change Character</button>
+    <button class="btn btn-secondary btn-small" onclick="showScreen('hub-screen')">🏠 Hub</button>
+    <button class="btn btn-secondary btn-small" onclick="showScreen('badges-screen');renderBadges()">🏅 Badges</button>
+  </div>
+</div>
+
+<!-- ===== GAME HUB ===== -->
+<div class="screen" id="hub-screen">
+  <div class="char-display" id="hub-char-display"></div>
+  <div class="hub-top">
+    <div class="stat-badge"><span class="stat-icon">⭐</span><span class="stat-val" id="hub-points">0</span> pts</div>
+    <div class="stat-badge"><span class="stat-icon">🪙</span><span class="stat-val" id="hub-coins">0</span> coins</div>
+    <div style="text-align:center">
+      <div class="level-label">Level <span id="hub-level">1</span>: <span id="hub-level-name">School Explorer</span></div>
+      <div class="level-bar"><div class="level-bar-fill" id="hub-level-bar" style="width:0%"></div></div>
+      <span style="font-size:.75rem;color:#8899aa"><span id="hub-exp">0</span>/<span id="hub-exp-max">100</span> XP</span>
+    </div>
+  </div>
+  <h2 class="section-title">🎯 Play a Challenge</h2>
+  <p class="section-sub">Practice any mini-game and earn extra points!</p>
+  <div class="game-area">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;width:100%">
+      <button class="btn btn-primary btn-small" onclick="startMiniGame('memory',true)">🧠 Forget-Me-Not Frenzy</button>
+      <button class="btn btn-primary btn-small" onclick="startMiniGame('maze',true)">🔀 A-Maze-Ing Escape</button>
+      <button class="btn btn-primary btn-small" onclick="startMiniGame('typing',true)">⌨️ Keyboard SMASH!</button>
+      <button class="btn btn-primary btn-small" onclick="startMiniGame('find',true)">🔍 Hide & Geek</button>
+      <button class="btn btn-primary btn-small" onclick="startMiniGame('match',true)">🔗 Icon-ic Confusion</button>
+    </div>
+  </div>
+  <div class="btn-bar">
+    <button class="btn btn-secondary" onclick="showScreen('chat-screen')">💬 Ask Questions</button>
+    <button class="btn btn-secondary" onclick="showScreen('badges-screen');renderBadges()">🏅 Badges</button>
+    <button class="btn btn-secondary" onclick="showScreen('leaderboard-screen');renderLeaderboard()">🏆 Leaderboard</button>
+    <button class="btn btn-secondary" onclick="showConfirmModal('Reset ALL progress? This cannot be undone.',resetProgress)">🔄 Reset</button>
+  </div>
+</div>
+
+<!-- ===== BADGES SCREEN ===== -->
+<div class="screen" id="badges-screen">
+  <h2 class="section-title">🏅 Your Badges</h2>
+  <div class="badge-grid" id="badge-grid"></div>
+  <div class="btn-bar"><button class="btn btn-secondary" onclick="showScreen('hub-screen')">← Back to Hub</button></div>
+</div>
+
+<!-- ===== LEADERBOARD SCREEN ===== -->
+<div class="screen" id="leaderboard-screen">
+  <h2 class="section-title">🏆 Leaderboard</h2>
+  <table class="leaderboard-table" id="leaderboard-table">
+    <thead><tr><th>#</th><th>Player</th><th>Character</th><th>Points</th><th>Level</th></tr></thead><tbody></tbody>
+  </table>
+  <div class="btn-bar">
+    <button class="btn btn-secondary" onclick="showScreen('title-screen')">← Home</button>
+    <button class="btn btn-secondary" onclick="showScreen('hub-screen')">Game Hub</button>
+  </div>
+</div>
+
+<!-- ===== MINI-GAME SCREEN ===== -->
+<div class="screen" id="game-screen">
+  <div class="char-display" id="game-char-display"></div>
+  <h2 class="section-title" id="game-title">Challenge</h2>
+  <div class="game-area" id="game-play-area"></div>
+  <div class="btn-bar"><button class="btn btn-secondary" onclick="quitGame()">🏠 Quit</button></div>
+</div>
+
+<script>
+// ===== SVG CHARACTERS =====
+const CHAR_SVGS = {
+  sunny: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="sg" cx="50%" cy="50%"><stop offset="0%" stop-color="#fff7c2"/><stop offset="100%" stop-color="#f0b90b"/></radialGradient></defs>
+    <circle cx="50" cy="50" r="24" fill="url(#sg)" stroke="#e6a800" stroke-width="2"/>
+    <g stroke="#f0b90b" stroke-width="3" stroke-linecap="round">
+      <line x1="50" y1="14" x2="50" y2="20"/><line x1="50" y1="80" x2="50" y2="86"/>
+      <line x1="14" y1="50" x2="20" y2="50"/><line x1="80" y1="50" x2="86" y2="50"/>
+      <line x1="24" y1="24" x2="29" y2="29"/><line x1="71" y1="71" x2="76" y2="76"/>
+      <line x1="76" y1="24" x2="71" y2="29"/><line x1="29" y1="76" x2="24" y2="71"/>
+    </g>
+    <circle cx="42" cy="46" r="3" fill="#e6a800"/><circle cx="58" cy="46" r="3" fill="#e6a800"/>
+    <path d="M42 56 Q50 64 58 56" fill="none" stroke="#e6a800" stroke-width="2" stroke-linecap="round"/>
+  </svg>`,
+  storm: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="stg" cx="50%" cy="40%"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c3aed"/></radialGradient></defs>
+    <path d="M25 55 Q30 35 50 35 Q55 20 65 30 Q80 28 82 42 Q92 45 88 55 Q90 62 82 62 L28 62 Q18 62 25 55Z" fill="url(#stg)" stroke="#6d28d9" stroke-width="2"/>
+    <path d="M48 64 L44 76 L52 74 L46 88" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M62 35 L60 40 M68 38 L66 43 M71 42 L68 45" fill="none" stroke="#ddd6fe" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="38" cy="52" r="2" fill="#4c1d95"/><circle cx="52" cy="48" r="2" fill="#4c1d95"/>
+    <path d="M40 56 Q45 59 50 56" fill="none" stroke="#4c1d95" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>`,
+  thunder: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="thg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+    <path d="M48 5 L58 5 L28 50 L42 50 L32 95 L72 40 L55 40 L66 20 L48 5Z" fill="url(#thg)" stroke="#0891b2" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="52" cy="32" r="2.5" fill="#fff"/><circle cx="45" cy="45" r="2.5" fill="#fff"/>
+  </svg>`,
+  rain: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="rag" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#93c5fd"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
+    <ellipse cx="48" cy="34" rx="20" ry="14" fill="url(#rag)" stroke="#2563eb" stroke-width="2"/>
+    <line x1="38" y1="55" x2="34" y2="68" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="50" y1="58" x2="46" y2="76" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="62" y1="54" x2="58" y2="70" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="40" cy="30" r="2.5" fill="#1e40af"/><circle cx="55" cy="28" r="2.5" fill="#1e40af"/>
+    <path d="M42 36 Q48 40 54 36" fill="none" stroke="#1e40af" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>`
+};
+
+// ===== GAME STATE =====
+let state = {
+  character: null, points: 0, coins: 0, totalXP: 0,
+  badges: {}, playerName: 'Player', currentGame: null,
+  questionTokens: 1 // Start with 1 free question. +1 per game won.
+};
+
+const LEVELS = [
+  { name:'School Explorer', minXP:0 },
+  { name:'Tech Detective', minXP:100 },
+  { name:'Coding Apprentice', minXP:300 },
+  { name:'Digital Master', minXP:600 },
+  { name:'School Legend', minXP:1000 },
+];
+
+const CHARACTERS = [
+  { id:'sunny', name:'Sunny', emoji:'☀️', color:'#f0b90b', desc:'Bright & optimistic', power:'+5 bonus points per challenge' },
+  { id:'storm', name:'Storm', emoji:'🌪️', color:'#a855f7', desc:'Intense & powerful', power:'2x points on first try' },
+  { id:'thunder', name:'Thunder', emoji:'⚡', color:'#00d4ff', desc:'Quick & energetic', power:'Extra 15s on timed games' },
+  { id:'rain', name:'Rain', emoji:'🌧️', color:'#60a5fa', desc:'Calm & persistent', power:'1 free hint per game' },
+];
+
+// REAL INFO from shkolladigjitale.com
+const KNOWLEDGE_BASE = [
+  { keywords:['about','school','digital school','what is','tell me about','info','information','describe','explain school','shkolla digjitale'],
+    answer:'<b>Shkolla Digjitale</b> (Digital School) is a private programming school based in Kosovo that trains kids and teens aged <b>8-18</b> in technology and programming. 🚀<br><br>Our motto: <b>"Improvise CODE Overcome"</b> — we focus on teaching <b>programming logic</b> so students become independent in ANY programming language they encounter in the future. Students learn to build real apps and websites while developing critical thinking and problem-solving skills.<br><br>The school is <b>licensed by MESTI</b> (Ministry of Education, Science, Technology and Innovation) and accredited by AKK, issuing certified <b>"Junior Programmer"</b> certificates. 📜<br><br>We\'ve become a <b>franchise</b> operating internationally in: Slovenia 🇸🇮, Germany 🇩🇪, USA 🇺🇸, North Macedonia 🇲🇰, Bosnia & Herzegovina 🇧🇦, Mexico 🇲🇽, Morocco 🇲🇦, and Brazil 🇧🇷!' },
+  { keywords:['founder','founded','hana','darsej','rizaj','qerimi','who started','who created','who founded','owner','boss','ceo','coo','co-founder','themelues','who is','who are'],
+    answer:'Shkolla Digjitale was founded by two amazing leaders:<br><br>👩‍💼 <b>Hana Qerimi</b> — Co-Founder & COO. Studied Business Management at UBT, Master\'s in Management Consulting in London. PMP and CMC certified (the globally recognized Certified Management Consultant). Has <b>10+ years</b> of professional experience in IT project management. She\'s also the co-founder of <b>Starlabs</b>, a software development company with ~100 developers working for international clients!<br><br>👨‍💼 <b>Darsej Rizaj</b> — Co-Founder.<br><br>🤝 Special connection: Successful Shkolla Digjitale students can do internships or get hired at Starlabs!' },
+  { keywords:['age','old','group','moshat','8','11','12','15','16','18','grupmoshat','how old'],
+    answer:'Shkolla Digjitale is for ages <b>8-18</b>, divided into 3 groups:<br><br>🧒 <b>8-11 years:</b> Programming Logic fundamentals — learning to think like a programmer!<br>🧑 <b>12-15 years:</b> Websites & Applications — building real web projects and apps.<br>👨‍💻 <b>16-18 years:</b> Advanced Programming → Professional Programming — mastering the craft at a pro level.' },
+  { keywords:['curriculum','kurs','course','level','subject','program','planprogrami','kurrikula','learn','study','mesimi','meso'],
+    answer:'Our curriculum has 4 levels 📚:<br><br>1️⃣ <b>Logjika e Programimit</b> (Programming Logic) — the foundation of all coding<br>2️⃣ <b>Webfaqe & Aplikacione</b> (Websites & Apps) — building real digital products<br>3️⃣ <b>Programim i Avancuar</b> (Advanced Programming) — deeper concepts<br>4️⃣ <b>Programim Profesional</b> (Professional Programming) — industry-ready skills<br><br>🎯 Our focus is on <b>programming logic</b> — once you master the logic, you can pick up ANY programming language!' },
+  { keywords:['location','city','campus','where','kosovo','kosova','prishtine','prizren','gjakove','ferizaj','peje','mitrovice','gjilan','lipjan','suhareke','qytetet','lokacion'],
+    answer:'Shkolla Digjitale has <b>9 locations</b> across Kosovo 🇽🇰:<br><br>📍 Prishtinë (HQ)<br>📍 Prizren<br>📍 Gjakovë<br>📍 Ferizaj<br>📍 Pejë<br>📍 Mitrovicë<br>📍 Gjilan<br>📍 Lipjan<br>📍 Suharekë<br><br>🌍 Plus international franchises in: Slovenia, Germany, USA, North Macedonia, Bosnia & Herzegovina, Mexico, Morocco, and Brazil!' },
+  { keywords:['stat','number','count','student','app','application','success','rate','shkalla','suksesit','1200','500'],
+    answer:'📊 <b>Shkolla Digjitale by the numbers:</b><br><br>👩‍🎓 <b>1,200+</b> active students<br>✅ <b>100%</b> success rate<br>📱 <b>500+</b> apps created by students!<br>🤖 Voluntarily trained <b>50,000</b> students & <b>700</b> teachers in AI across public schools in Prishtina!<br><br>Our students have built real applications — you can see them showcased on the website!' },
+  { keywords:['AI','artificial intelligence','inteligjence','artificiale','machine learning'],
+    answer:'Shkolla Digjitale takes AI seriously! 🤖<br><br>We <b>voluntarily trained approximately 50,000 students and 700 teachers</b> with AI knowledge in the public schools of Prishtina — for free! This massive initiative brought AI literacy to an entire generation of Kosovar students.<br><br>Our AI curriculum covers: understanding how AI works, responsible AI use, hands-on AI projects, and preparing for an AI-driven future.' },
+  { keywords:['certificate','certifikate','junior','programmer','programer','akk','ministria','mesim','licensed','accredited','akredituar','licensuar'],
+    answer:'Shkolla Digjitale is officially:<br><br>🏛️ <b>Licensed by MESTI</b> — Ministry of Education, Science, Technology and Innovation of Kosovo<br>✅ <b>Accredited by AKK</b> (Kosovo Accreditation Agency)<br>📜 Issues certified <b>"Programer Junior" (Junior Programmer)</b> certificates — recognized professional credentials!<br><br>This means your learning is officially recognized and certified. 🎓' },
+  { keywords:['phone','call','contact','number','tel','kontakt','kontakti','reach','email'],
+    answer:'📞 <b>Need help? Call us!</b><br><br>Phone: <b>038 616 316</b><br><br>🌐 Website: <a href="https://shkolladigjitale.com" target="_blank">shkolladigjitale.com</a><br><br>📱 Follow us on social media: Facebook, Instagram, LinkedIn, YouTube, Twitch, and X (Twitter) — search for "Shkolla Digjitale"!' },
+  { keywords:['motto','moto','slogan','improvise','overcome','code','what is the motto','school motto'],
+    answer:'Our motto: <b>"Improvise CODE Overcome"</b> 💪<br><br>What it means: In programming (and in life), you improvise solutions, you code them into reality, and you overcome every challenge. That\'s the mindset we build in every student at Shkolla Digjitale!' },
+  { keywords:['coding','programming','language','python','javascript','java','scratch','code','programim','gjuhe'],
+    answer:'Shkolla Digjitale doesn\'t focus on just ONE programming language — we teach <b>programming LOGIC</b> first! 🧠<br><br>Once you master logic, you can learn any language: Python, JavaScript, Java, C++, Scratch, or whatever comes next!<br><br>Our curriculum covers: web development, app building, advanced programming, and professional-level software development. Students build <b>real applications and websites</b> — not just exercises!' },
+  { keywords:['starlabs','star labs','intern','internship','job','career','work','hire','punë'],
+    answer:'🤝 <b>Starlabs Connection:</b> Shkolla Digjitale has a special partnership with <b>Starlabs</b>, a software development company co-founded by Hana Qerimi that employs ~100 developers working for international clients!<br><br>🌟 The best part: <b>Successful Shkolla Digjitale students can do internships or get hired at Starlabs!</b> This means your learning path can lead directly to a real tech job. 🚀<br><br>It\'s the ultimate bridge from learning to professional career!' },
+  { keywords:['history','founded','start','origin','created','when','year','began','franchise','franshize'],
+    answer:'Shkolla Digjitale started in <b>Kosovo</b> and grew rapidly! 🇽🇰<br><br>📈 Key milestones:<br>• Started as a local programming course for kids<br>• Grew to <b>1,200+ active students</b> with 100% success rate<br>• Became a <b>licensed & accredited</b> institution by MESTI and AKK<br>• Expanded to <b>9 cities</b> across Kosovo<br>• Became an <b>international franchise</b> in 8 countries: Slovenia, Germany, USA, North Macedonia, Bosnia, Mexico, Morocco, Brazil<br>• Trained <b>50,000+ students & 700 teachers</b> in AI voluntarily<br>• Visited by the Prime Minister and ministers of Kosovo! 🇽🇰' },
+];
+
+function findAnswer(question) {
+  const q = question.toLowerCase();
+  let best = null, bestScore = 0;
+  for (const entry of KNOWLEDGE_BASE) {
+    let score = 0;
+    for (const kw of entry.keywords) {
+      if (q.includes(kw)) score += kw.split(' ').length;
+    }
+    if (score >= bestScore) { bestScore = score; best = entry; }
+  }
+  if (bestScore >= 1) return best.answer;
+  // Generic fallback
+  return `Great question! "${question}" — at Digital School, we believe curiosity drives learning. Our programs cover coding, AI, robotics, digital design, and more. Students learn by building real projects with cutting-edge technology. Want to know more about a specific topic? Try asking about our courses, technology, history, or coding programs! 🚀`;
+}
+
+const BADGES = [
+  { id:'first_win', name:'First Victory', emoji:'🌟', cond: s => s.totalXP > 0 },
+  { id:'fast_learner', name:'Fast Learner', emoji:'⚡', cond: s => s.totalXP >= 50 },
+  { id:'memory_master', name:'Memory Master', emoji:'🧠', cond: s => s.totalXP >= 150 },
+  { id:'quiz_champion', name:'Quiz Champion', emoji:'🏆', cond: s => s.totalXP >= 200 },
+  { id:'speed_typer', name:'Speed Typer', emoji:'⌨️', cond: s => s.totalXP >= 350 },
+  { id:'coding_hero', name:'Coding Hero', emoji:'💻', cond: s => s.totalXP >= 500 },
+  { id:'collector', name:'Coin Collector', emoji:'🪙', cond: s => s.coins >= 50 },
+  { id:'ds_expert', name:'Digital School Expert', emoji:'🎓', cond: s => s.totalXP >= 1000 },
+];
+
+const CHALLENGE_NAMES = {
+  memory:'🧠 Forget-Me-Not Frenzy', maze:'🔀 A-Maze-Ing Escape',
+  typing:'⌨️ Keyboard SMASH!', find:'🔍 Hide & Geek', match:'🔗 Icon-ic Confusion'
+};
+
+// Quiz questions — REAL facts from shkolladigjitale.com
+const QUIZ_QUESTIONS = [
+  { q:'What is the motto of Shkolla Digjitale?', a:['improvise code overcome'], hint:'Three powerful words starting with I, C, O...' },
+  { q:'How many locations does Shkolla Digjitale have in Kosovo?', a:['9','nine'], hint:'Count: Prishtinë, Prizren, Gjakovë, Ferizaj, Pejë, Mitrovicë, Gjilan, Lipjan, Suharekë!' },
+  { q:'Who is the female co-founder of Shkolla Digjitale?', a:['hana qerimi','hana'], hint:'She\'s also the co-founder of Starlabs!' },
+  { q:'What age group is Shkolla Digjitale for?', a:['8-18','8 to 18','8 18'], hint:'From elementary school to high school graduation.' },
+  { q:'How many active students does Shkolla Digjitale have?', a:['1200','1200+','over 1200'], hint:'It\'s in the thousands — 12 hundred.' },
+  { q:'What certificate do graduates receive?', a:['junior programmer','programer junior'], hint:'It starts with "Junior" and ends with your new job title!' },
+  { q:'What does AI stand for?', a:['artificial intelligence'], hint:'Two words — "A" is for Artificial.' },
+  { q:'How many apps have Shkolla Digjitale students created?', a:['500','500+','over 500'], hint:'Half of a thousand!' },
+  { q:'Which ministry licenses Shkolla Digjitale?', a:['mesti','ministria','ministry of education','education'], hint:'M_____ — Ministry of Education, Science, Technology and Innovation.' },
+  { q:'What is the phone number for Shkolla Digjitale?', a:['038 616 316','038616316'], hint:'It starts with 038...' },
+  { q:'What country is Shkolla Digjitale based in?', a:['kosovo','kosova'], hint:'🇽🇰 The newest country in Europe!' },
+  { q:'How many students and teachers were trained in AI voluntarily?', a:['50000','50,000','50 000'], hint:'Fifty thousand — that\'s a lot!' },
+  { q:'What is the first curriculum level called? (in Albanian)', a:['logjika e programimit','programming logic'], hint:'L_____ e P__________ — it means "Logic of Programming".' },
+  { q:'What company can successful students get internships at?', a:['starlabs','star labs'], hint:'Founded by Hana Qerimi, it employs ~100 developers!' },
+  { q:'What do you call a mistake in code?', a:['bug','error'], hint:'It\'s a tiny creature that ruins your day!' },
+  { q:'What does HTML stand for?', a:['hypertext markup language'], hint:'H_____T___ M_____ L______ — the skeleton of every website!' },
+];
+
+// ===== STORAGE =====
+function saveState(){localStorage.setItem('ds_state',JSON.stringify(state))}
+function loadState(){const s=localStorage.getItem('ds_state');if(s){const l=JSON.parse(s);state={...state,...l}}}
+function getLB(){const l=localStorage.getItem('ds_lb');return l?JSON.parse(l):[]}
+function addToLB(){
+  const lb=getLB();const ex=lb.findIndex(e=>e.name===state.playerName);
+  const entry={name:state.playerName,character:state.character?state.character.name:'Unknown',points:state.points,level:getLevel(),levelName:getLevelName(),xp:state.totalXP,date:new Date().toISOString()};
+  if(ex>=0)lb[ex]=entry;else lb.push(entry);
+  lb.sort((a,b)=>b.points-a.points);localStorage.setItem('ds_lb',JSON.stringify(lb.slice(0,50)));
+}
+
+// ===== SCREEN =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  updateHubStats();
+}
+
+// ===== MODALS (non-blocking) =====
+function showNameModal(){
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal-box"><h3>Welcome, Student! 🎓</h3><p>Enter your player name:</p>
+    <input class="modal-input" id="name-input" value="${state.playerName==='Player'?'Liana':state.playerName}" placeholder="Liana" maxlength="20" autofocus onkeydown="if(event.key==='Enter')submitNameModal()">
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="submitNameModal()">Let's Go! 🚀</button>
+      <button class="btn btn-secondary btn-small" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>document.getElementById('name-input').focus(),100);
+}
+function submitNameModal(){
+  const inp=document.getElementById('name-input');
+  state.playerName=inp.value.trim()||'Liana';
+  document.querySelector('.modal-overlay').remove();
+  startGame();
+}
+
+function showConfirmModal(msg,cb){
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal-box"><h3>⚠️ Are you sure?</h3><p>${msg}</p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="document.querySelector('.modal-overlay').remove();(${cb.toString()})()">Confirm</button>
+      <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+}
+
+// ===== LEVELS =====
+function getLevel(){for(let i=LEVELS.length-1;i>=0;i--){if(state.totalXP>=LEVELS[i].minXP)return i+1}return 1}
+function getLevelName(){for(let i=LEVELS.length-1;i>=0;i--){if(state.totalXP>=LEVELS[i].minXP)return LEVELS[i].name}return LEVELS[0].name}
+function getXPForNext(){const l=getLevel();return l<LEVELS.length?LEVELS[l].minXP:LEVELS[LEVELS.length-1].minXP}
+function getXPProgress(){const l=getLevel();const cur=LEVELS[l-1].minXP;const nxt=l<LEVELS.length?LEVELS[l].minXP:cur+500;if(nxt===cur)return 100;return Math.min(100,Math.round(((state.totalXP-cur)/(nxt-cur))*100))}
+
+function updateHubStats(){
+  document.getElementById('hub-points').textContent=state.points;
+  document.getElementById('hub-coins').textContent=state.coins;
+  document.getElementById('hub-level').textContent=getLevel();
+  document.getElementById('hub-level-name').textContent=getLevelName();
+  document.getElementById('hub-level-bar').style.width=getXPProgress()+'%';
+  document.getElementById('hub-exp').textContent=state.totalXP;
+  document.getElementById('hub-exp-max').textContent=getXPForNext();
+}
+
+// ===== POINTS =====
+function awardPoints(pts,coinGain){
+  let bonus=0;
+  if(state.character&&state.character.id==='sunny')bonus=5;
+  if(state.character&&state.character.id==='storm'&&!state._stormUsed){bonus=pts;state._stormUsed=true}
+  const total=pts+bonus;state.points+=total;state.totalXP+=total;state.coins+=(coinGain||0);
+  checkBadges();addToLB();saveState();updateHubStats();spawnParticles();return total;
+}
+
+function checkBadges(){
+  let changed=false;
+  for(const b of BADGES){if(!state.badges[b.id]&&b.cond(state)){state.badges[b.id]=true;changed=true}}
+  if(changed)saveState();
+}
+
+function spawnParticles(){
+  const c=document.createElement('div');c.className='particles';document.body.appendChild(c);
+  const emojis=['⭐','✨','🌟','💫','🎉','🪙','🔥'];
+  for(let i=0;i<20;i++){
+    const p=document.createElement('span');
+    p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    p.style.cssText=`position:absolute;font-size:${1+Math.random()*2}rem;left:${10+Math.random()*80}%;top:${20+Math.random()*60}%;animation:pf${1+Math.random()*2}s ease-out forwards;animation-delay:${Math.random()*.3}s;pointer-events:none`;
+    c.appendChild(p);
+  }
+  const s=document.createElement('style');s.textContent='@keyframes pf{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(200px) scale(.3)}}';
+  c.appendChild(s);setTimeout(()=>c.remove(),2500);
+}
+
+// ===== CHARACTER SELECT =====
+function renderCharacters(){
+  const g=document.getElementById('char-grid');
+  g.innerHTML=CHARACTERS.map(c=>`
+    <div class="char-card" id="char-${c.id}" onclick="selectChar('${c.id}')">
+      ${CHAR_SVGS[c.id]}
+      <div class="char-name">${c.name}</div>
+      <div class="char-desc">${c.desc}</div>
+      <div class="char-power">⚡ ${c.power}</div>
+    </div>`).join('');
+  if(state.character)selectChar(state.character.id);
+}
+function selectChar(id){
+  document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('char-'+id).classList.add('selected');
+  state.character=CHARACTERS.find(c=>c.id===id);
+  document.getElementById('char-confirm').disabled=false;
+}
+function confirmCharacter(){
+  if(!state.character)return;
+  saveState();
+  updateChatHeader();
+  showScreen('chat-screen');
+}
+function updateChatHeader(){
+  if(!state.character)return;
+  const c=state.character;
+  document.getElementById('chat-avatar-icon').style.background=`${c.color}22`;
+  document.getElementById('chat-avatar-icon').innerHTML=CHAR_SVGS[c.id];
+  document.getElementById('chat-char-name').textContent=c.name;
+  document.getElementById('chat-char-title').textContent='Your Shkolla Digjitale Guide';
+  const td=document.getElementById('token-display');
+  if(td) td.innerHTML=`🎫 ×${state.questionTokens||0}`;
+  document.querySelectorAll('#chat-messages .chat-msg.guide .avatar').forEach(a=>{
+    a.innerHTML=CHAR_SVGS[c.id];
+  });
+  document.querySelectorAll('.char-display').forEach(el=>{
+    el.innerHTML=`${CHAR_SVGS[c.id]} <div><strong style="color:${c.color}">${c.name}</strong><br><small style="color:#8899aa">${c.desc}</small></div>`;
+  });
+}
+
+// ===== START GAME =====
+function startGame(){
+  renderCharacters();
+  showScreen('char-screen');
+}
+
+// ===== Q&A SYSTEM =====
+function askQuestion(){
+  const inp=document.getElementById('chat-input');
+  const q=inp.value.trim();
+  if(!q)return;
+  if(state._quizActive) return handleQuizAnswer(q);
+  
+  addChatMsg('user',q);
+  inp.value='';
+  document.getElementById('chat-send-btn').disabled=true;
+  
+  // If student has question tokens, answer directly!
+  if(state.questionTokens > 0){
+    state.questionTokens--;
+    saveState();
+    const answer = findAnswer(q);
+    setTimeout(()=>{
+      addChatMsg('guide',`📖 <b>${answer}</b><br><br><i style="color:#8899aa">Questions remaining: ${'🎫'.repeat(state.questionTokens)||'0 — play a game to earn more!'}</i>`);
+      document.getElementById('chat-send-btn').disabled=false;
+    },600);
+    return;
+  }
+  
+  // No tokens — must play a game!
+  const games=['memory','maze','typing','find','match'];
+  const game=games[Math.floor(Math.random()*games.length)];
+  state._pendingGame=game;
+  state._stormUsed=false;
+  
+  setTimeout(()=>{
+    addChatMsg('guide',`Whoa there, ${state.playerName}! 🔒 You need to earn the right to ask!<br><br>Beat the <b>${CHALLENGE_NAMES[game]}</b> and I'll answer your question!<br><button class="chat-accept" onclick="acceptChallenge('${game}')">🎮 Play Game to Unlock (+50 pts, +1 🎫, +10 🪙)</button>`);
+    document.getElementById('chat-send-btn').disabled=false;
+  },600);
+}
+
+function handleQuizAnswer(userAnswer){
+  const quiz = state._quizActive;
+  if(!quiz) return;
+  const ans = userAnswer.toLowerCase().trim();
+  const correct = quiz.a.some(a => ans.includes(a) || a.includes(ans));
+  if(correct){
+    addChatMsg('user',userAnswer);
+    document.getElementById('chat-input').value='';
+    state._quizActive = null;
+    state.questionTokens++;
+    awardPoints(20,0);
+    saveState();
+    addChatMsg('system',`✅ CORRECT! +20 Points! +1 Question Token 🎫 (${state.questionTokens} total)`);
+    document.getElementById('chat-send-btn').disabled=false;
+  } else {
+    addChatMsg('user',userAnswer);
+    document.getElementById('chat-input').value='';
+    addChatMsg('system','❌ Not quite! The guide will now challenge you to a game instead...');
+    const games=['memory','maze','typing','find','match'];
+    const game=games[Math.floor(Math.random()*games.length)];
+    state._quizActive = null;
+    state._pendingGame=game;
+    setTimeout(()=>{
+      addChatMsg('guide',`No worries! Beat the <b>${CHALLENGE_NAMES[game]}</b> and you can ask your question!<br><button class="chat-accept" onclick="acceptChallenge('${game}')">🎮 Play Game (+50 pts, +1 🎫, +10 🪙)</button>`);
+    },400);
+    document.getElementById('chat-send-btn').disabled=false;
+  }
+}
+
+function addChatMsg(type,text){
+  const msgs=document.getElementById('chat-messages');
+  const div=document.createElement('div');
+  div.className=`chat-msg ${type}`;
+  const avatarContent=type==='user'?'🧑‍🎓':CHAR_SVGS[state.character?state.character.id:'sunny'];
+  div.innerHTML=`<div class="avatar">${avatarContent}</div><div class="bubble">${text}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function acceptChallenge(game){
+  state.currentGame=game;
+  startMiniGame(game,false);
+}
+
+// ===== MINI-GAME ROUTER =====
+let mgs={};
+
+function startMiniGame(game,freePlay){
+  state.currentGame=game;
+  state._freePlay=freePlay||false;
+  mgs={};
+  showScreen('game-screen');
+  document.getElementById('game-title').textContent=CHALLENGE_NAMES[game];
+  updateChatHeader();
+  const area=document.getElementById('game-play-area');
+  area.innerHTML='';
+  switch(game){
+    case 'memory':startMemory(area);break;
+    case 'maze':startMaze(area);break;
+    case 'typing':startTyping(area);break;
+    case 'find':startFind(area);break;
+    case 'match':startMatch(area);break;
+  }
+}
+
+function quitGame(){
+  cleanupGame();
+  showScreen('chat-screen');
+}
+
+function cleanupGame(){
+  if(mgs._keyHandler){document.removeEventListener('keydown',mgs._keyHandler);delete mgs._keyHandler}
+  if(mgs._timer){clearInterval(mgs._timer);delete mgs._timer}
+}
+
+function handleGameWin(){
+  cleanupGame();
+  state.questionTokens++;
+  const pts=awardPoints(50,10);
+  saveState();
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="overlay-box">
+    <div class="overlay-emoji">🎉</div>
+    <div class="overlay-title">CHALLENGE COMPLETE!</div>
+    <div class="overlay-sub">+${pts} Points &nbsp; +10 🪙 Coins &nbsp; +1 🎫 Question Token</div>
+    <p style="color:#8899aa;margin:8px 0">You now have <b style="color:#f0b90b">${state.questionTokens}</b> question token(s)! Go ask something!</p>
+    <div class="btn-bar" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="this.closest('.overlay').remove();showScreen('chat-screen')">💬 Ask a Question</button>
+      <button class="btn btn-secondary" onclick="this.closest('.overlay').remove();showScreen('hub-screen')">🏠 Hub</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+function handleGameLose(){
+  cleanupGame();
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="overlay-box">
+    <div class="overlay-emoji">😔</div>
+    <div class="overlay-title">KEEP TRYING!</div>
+    <p style="color:#8899aa;margin:8px 0">Practice makes perfect. You can do it!</p>
+    <div class="btn-bar" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="this.closest('.overlay').remove();retryGame()">🔄 Try Again</button>
+      <button class="btn btn-secondary" onclick="this.closest('.overlay').remove();showScreen('chat-screen')">💬 Back to Chat</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+function retryGame(){
+  if(state.currentGame)startMiniGame(state.currentGame,state._freePlay);
+}
+
+// ===== 1. MEMORY =====
+function startMemory(area){
+  const icons=['💻','📱','🖥️','⌨️','🖱️','🎮','🤖','🔌'];
+  const pairs=[...icons,...icons];pairs.sort(()=>Math.random()-.5);
+  mgs={cards:pairs,flipped:[],matched:new Set(),moves:0,lock:false};
+  const grid=document.createElement('div');grid.className='memory-grid';
+  pairs.forEach((icon,i)=>{
+    const card=document.createElement('div');card.className='memory-card';card.dataset.index=i;card.textContent='❓';
+    card.onclick=()=>flipMC(card,i,icon);grid.appendChild(card);
+  });
+  area.appendChild(grid);
+  const info=document.createElement('p');info.style.cssText='color:#8899aa;margin-top:15px';info.id='mem-info';
+  info.textContent=`Moves: 0 | Pairs: 0/${icons.length}`;area.appendChild(info);
+}
+function flipMC(card,i,icon){
+  if(mgs.lock||mgs.matched.has(i)||mgs.flipped.includes(i))return;
+  card.classList.add('flipped');card.textContent=icon;mgs.flipped.push(i);
+  if(mgs.flipped.length===2){mgs.moves++;mgs.lock=true;
+    const[a,b]=mgs.flipped;const cards=document.querySelectorAll('.memory-card');
+    if(mgs.cards[a]===mgs.cards[b]){mgs.matched.add(a);mgs.matched.add(b);cards[a].classList.add('matched');cards[b].classList.add('matched');mgs.flipped=[];mgs.lock=false;updateMemInfo();
+      if(mgs.matched.size===mgs.cards.length)setTimeout(handleGameWin,400);
+    }else{setTimeout(()=>{cards[a].classList.remove('flipped');cards[b].classList.remove('flipped');cards[a].textContent='❓';cards[b].textContent='❓';mgs.flipped=[];mgs.lock=false;updateMemInfo()},800)}
+    updateMemInfo();
+  }
+}
+function updateMemInfo(){
+  const el=document.getElementById('mem-info');if(el)el.textContent=`Moves: ${mgs.moves} | Pairs: ${mgs.matched.size/2}/${mgs.cards.length/2}`;
+}
+
+// ===== 2. MAZE =====
+function startMaze(area){
+  const COLS=15,ROWS=11;const cs=Math.min(40,Math.floor(Math.min(window.innerWidth-80,600)/COLS));
+  const grid=Array(ROWS).fill(null).map(()=>Array(COLS).fill(1));
+  const visited=Array(ROWS).fill(null).map(()=>Array(COLS).fill(false));
+  function carve(cx,cy){grid[cy][cx]=0;visited[cy][cx]=true;const dirs=[[0,-2],[2,0],[0,2],[-2,0]];dirs.sort(()=>Math.random()-.5);for(const[dx,dy]of dirs){const nx=cx+dx,ny=cy+dy;if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!visited[ny][nx]){grid[cy+dy/2][cx+dx/2]=0;carve(nx,ny)}}}
+  carve(1,1);
+  const pp=[1,1],ep=[COLS-2,ROWS-2];grid[ep[1]][ep[0]]=2;
+  const passages=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(grid[r][c]===0)passages.push([c,r]);
+  passages.sort(()=>Math.random()-.5);
+  const coins=[];for(const[c,r]of passages){if(coins.length>=3)break;const tc=coins.some(([cc,cr])=>Math.abs(c-cc)+Math.abs(r-cr)<3)||(c===1&&r===1)||(c===ep[0]&&r===ep[1]);if(!tc)coins.push([c,r])}
+  mgs={grid,pp,ep,coins,collected:0,moves:0,cs,COLS,ROWS};
+  const canvas=document.createElement('canvas');canvas.id='maze-canvas';canvas.width=COLS*cs+20;canvas.height=ROWS*cs+20;area.appendChild(canvas);
+  const dpad=document.createElement('div');dpad.className='maze-dpad';
+  dpad.innerHTML=`<div></div><button class="dpad-btn" onclick="mazeMove(0,-1)">▲</button><div></div><button class="dpad-btn" onclick="mazeMove(-1,0)">◀</button><div></div><button class="dpad-btn" onclick="mazeMove(1,0)">▶</button><div></div><button class="dpad-btn" onclick="mazeMove(0,1)">▼</button><div></div>`;
+  area.appendChild(dpad);
+  const info=document.createElement('p');info.style.cssText='color:#8899aa;margin-top:10px';info.id='maze-info';info.textContent='Find 🏁! Collect coins along the way.';area.appendChild(info);
+  drawMaze(canvas);
+  const kh=e=>{if(!document.getElementById('game-screen').classList.contains('active'))return;if(state.currentGame!=='maze')return;switch(e.key){case'ArrowUp':case'w':case'W':e.preventDefault();mazeMove(0,-1);break;case'ArrowDown':case's':case'S':e.preventDefault();mazeMove(0,1);break;case'ArrowLeft':case'a':case'A':e.preventDefault();mazeMove(-1,0);break;case'ArrowRight':case'd':case'D':e.preventDefault();mazeMove(1,0);break}};
+  document.addEventListener('keydown',kh);mgs._keyHandler=kh;
+}
+function mazeMove(dx,dy){
+  const m=mgs;const nx=m.pp[0]+dx,ny=m.pp[1]+dy;
+  if(nx<0||nx>=m.COLS||ny<0||ny>=m.ROWS)return;if(m.grid[ny][nx]===1)return;
+  m.pp=[nx,ny];m.moves++;
+  m.coins=m.coins.filter(([cc,cr])=>{if(cc===nx&&cr===ny){m.collected++;return false}return true});
+  drawMaze(document.getElementById('maze-canvas'));
+  document.getElementById('maze-info').textContent=`Moves: ${m.moves} | Coins: ${m.collected}/${m.coins.length+m.collected}`;
+  if(nx===m.ep[0]&&ny===m.ep[1]){cleanupGame();setTimeout(handleGameWin,300)}
+}
+function drawMaze(canvas){
+  if(!canvas)return;const ctx=canvas.getContext('2d');const m=mgs;const cs=m.cs;const ox=10,oy=10;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let r=0;r<m.ROWS;r++)for(let c=0;c<m.COLS;c++){const x=ox+c*cs,y=oy+r*cs;if(m.grid[r][c]===1){ctx.fillStyle='#1a2238';ctx.fillRect(x,y,cs,cs)}else{ctx.fillStyle='#0a1226';ctx.fillRect(x,y,cs,cs);ctx.strokeStyle='#1a2a40';ctx.strokeRect(x,y,cs,cs)}}
+  ctx.fillStyle='#10b981';ctx.font=`${cs*.7}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const[ex,ey]=m.ep;ctx.fillText('🏁',ox+ex*cs+cs/2,oy+ey*cs+cs/2);
+  for(const[cc,cr]of m.coins){ctx.font=`${cs*.6}px sans-serif`;ctx.fillText('🪙',ox+cc*cs+cs/2,oy+cr*cs+cs/2)}
+  const[px,py]=m.pp;const px2=ox+px*cs+cs/2,py2=oy+py*cs+cs/2;const color=state.character?state.character.color:'#f0b90b';
+  const glow=ctx.createRadialGradient(px2,py2,cs*.1,px2,py2,cs*.6);glow.addColorStop(0,color);glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(px2,py2,cs*.6,0,Math.PI*2);ctx.fill();
+  ctx.font=`${cs*.7}px sans-serif`;ctx.fillText(state.character?state.character.emoji:'😊',px2,py2);
+}
+
+// ===== 3. TYPING =====
+function startTyping(area){
+  const words=['algorithm','variable','function','python','javascript','database','server','network','digital','school','learning','coding','robot','circuit','binary','compile','debug','syntax','loop','array','object','cloud','firewall','browser','HTML','CSS','java','react','node','boolean','string','float'];
+  mgs={words,score:0,timeLeft:30,idx:0};
+  mgs.cw=words[Math.floor(Math.random()*words.length)];
+  area.innerHTML=`<div class="typing-timer" id="typing-timer">30</div><div class="typing-word" id="typing-word">${mgs.cw}</div><input class="typing-input" id="typing-input" placeholder="Type the word..." autocomplete="off" autofocus><p style="color:#8899aa;margin-top:10px" id="typing-score">Score: 0 | Words: 0</p>`;
+  mgs._timer=setInterval(()=>{mgs.timeLeft--;document.getElementById('typing-timer').textContent=mgs.timeLeft;if(mgs.timeLeft<=0){clearInterval(mgs._timer);document.getElementById('typing-input').disabled=true;if(mgs.score>=5)handleGameWin();else handleGameLose()}},1000);
+  setTimeout(()=>{const inp=document.getElementById('typing-input');if(inp){inp.focus();inp.addEventListener('input',typingCheck)}},100);
+}
+function typingCheck(e){
+  const v=e.target.value.trim().toLowerCase();
+  if(v===mgs.cw.toLowerCase()){mgs.score++;mgs.idx++;e.target.value='';mgs.cw=mgs.words[Math.floor(Math.random()*mgs.words.length)];document.getElementById('typing-word').textContent=mgs.cw;document.getElementById('typing-score').textContent=`Score: ${mgs.score} | Words: ${mgs.idx}`;document.getElementById('typing-word').style.color='#10b981';setTimeout(()=>document.getElementById('typing-word').style.color='#f0b90b',200)}
+}
+
+// ===== 4. FIND LAPTOP =====
+function startFind(area){
+  const W=700,H=400;const lx=50+Math.random()*(W-150),ly=50+Math.random()*(H-150);
+  mgs={lx,ly,clicks:0,found:false};
+  const decoys=[];const icons=['📁','📊','📝','🔧','⚙️','📌','🔗','📎','💡','🎯','📋','🗂️'];
+  for(let i=0;i<15;i++){let dx,dy;do{dx=30+Math.random()*(W-80);dy=30+Math.random()*(H-80)}while(Math.abs(dx-lx)<80&&Math.abs(dy-ly)<80);decoys.push({x:dx,y:dy,icon:icons[i%icons.length],size:1.3+Math.random()*.8})}
+  const cont=document.createElement('div');cont.className='find-container';cont.style.maxWidth=W+'px';cont.style.height=H+'px';
+  decoys.forEach(d=>{const el=document.createElement('span');el.style.cssText=`position:absolute;left:${d.x}px;top:${d.y}px;font-size:${d.size}rem;opacity:.5;pointer-events:none`;el.textContent=d.icon;cont.appendChild(el)});
+  const laptop=document.createElement('span');laptop.className='find-laptop-el';laptop.style.cssText=`left:${lx}px;top:${ly}px`;laptop.textContent='💻';
+  laptop.onclick=e=>{e.stopPropagation();if(mgs.found)return;mgs.found=true;mgs.clicks++;document.getElementById('find-clicks').textContent=`Found in ${mgs.clicks} clicks!`;cont.style.border='3px solid #10b981';setTimeout(handleGameWin,600)};
+  cont.appendChild(laptop);
+  cont.onclick=()=>{if(mgs.found)return;mgs.clicks++;document.getElementById('find-clicks').textContent=`Clicks: ${mgs.clicks}`;if(mgs.clicks>=30){laptop.style.opacity='1';laptop.style.fontSize='4rem';cont.style.border='2px solid #ff6b35'}};
+  area.appendChild(cont);
+  const cd=document.createElement('p');cd.className='find-clicks';cd.id='find-clicks';cd.style.cssText='color:#8899aa;margin-top:10px';cd.textContent='Clicks: 0';area.appendChild(cd);
+  const hint=document.createElement('p');hint.style.cssText='color:#8899aa;margin-top:4px;font-size:.8rem';hint.textContent='💡 After 30 clicks the laptop becomes easier to spot!';area.appendChild(hint);
+}
+
+// ===== 5. MATCH ICONS =====
+function startMatch(area){
+  const pairs=[{icon:'💻',name:'Laptop'},{icon:'🖥️',name:'Desktop'},{icon:'⌨️',name:'Keyboard'},{icon:'🖱️',name:'Mouse'},{icon:'🤖',name:'Robot'},{icon:'🔌',name:'Plug'},{icon:'📱',name:'Phone'},{icon:'🌐',name:'Internet'}];
+  mgs={pairs,selI:null,selN:null,matched:new Set()};
+  const si=[...pairs].sort(()=>Math.random()-.5);const sn=[...pairs].sort(()=>Math.random()-.5);
+  const cont=document.createElement('div');cont.className='match-container';
+  cont.innerHTML=`<div class="match-column"><h4 style="color:#f0b90b;text-align:center;margin-bottom:8px">Icons</h4>${si.map(p=>`<div class="match-item icon-item" data-id="${p.name}" onclick="selMI('${p.name}',this)">${p.icon}</div>`).join('')}</div><div class="match-column"><h4 style="color:#00d4ff;text-align:center;margin-bottom:8px">Names</h4>${sn.map(p=>`<div class="match-item name-item" data-id="${p.name}" onclick="selMN('${p.name}',this)">📛 ${p.name}</div>`).join('')}</div>`;
+  area.appendChild(cont);
+  const st=document.createElement('p');st.style.cssText='color:#8899aa;margin-top:15px';st.id='match-status';st.textContent='Click an icon, then its matching name!';area.appendChild(st);
+}
+function selMI(name,el){if(mgs.matched.has(name))return;document.querySelectorAll('.icon-item').forEach(i=>i.classList.remove('selected'));el.classList.add('selected');mgs.selI={name,el};chkMatch()}
+function selMN(name,el){if(mgs.matched.has(name))return;document.querySelectorAll('.name-item').forEach(i=>i.classList.remove('selected'));el.classList.add('selected');mgs.selN={name,el};chkMatch()}
+function chkMatch(){
+  if(!mgs.selI||!mgs.selN)return;
+  if(mgs.selI.name===mgs.selN.name){mgs.matched.add(mgs.selI.name);mgs.selI.el.classList.add('matched');mgs.selN.el.classList.add('matched');mgs.selI.el.classList.remove('selected');mgs.selN.el.classList.remove('selected');mgs.selI=null;mgs.selN=null;document.getElementById('match-status').textContent=`Matched: ${mgs.matched.size}/${mgs.pairs.length}`;if(mgs.matched.size===mgs.pairs.length)setTimeout(handleGameWin,400)}
+  else{setTimeout(()=>{mgs.selI.el.classList.remove('selected');mgs.selN.el.classList.remove('selected');mgs.selI=null;mgs.selN=null;document.getElementById('match-status').textContent='❌ Wrong! Try again.';setTimeout(()=>{document.getElementById('match-status').textContent='Click an icon, then its matching name!'},1000)},300)}
+}
+
+// ===== BADGES =====
+function renderBadges(){
+  document.getElementById('badge-grid').innerHTML=BADGES.map(b=>{const e=state.badges[b.id];return`<div class="badge-item ${e?'earned':'locked'}"><span class="badge-emoji">${b.emoji}</span><div class="badge-name">${b.name}</div><div class="badge-status" style="color:${e?'#10b981':'#8899aa'}">${e?'✅ Earned':'🔒 Locked'}</div></div>`}).join('');
+}
+
+// ===== LEADERBOARD =====
+function renderLeaderboard(){
+  const lb=getLB();const tb=document.querySelector('#leaderboard-table tbody');
+  tb.innerHTML=lb.slice(0,20).map((e,i)=>`<tr><td class="${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':''}">${i+1}</td><td>${e.name}</td><td>${e.character}</td><td style="color:#f0b90b;font-weight:700">${e.points}</td><td>Lv.${e.level} ${e.levelName||''}</td></tr>`).join('');
+  if(lb.length===0)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#8899aa;padding:30px">No players yet! Complete a challenge to appear here. 🎮</td></tr>';
+}
+
+function resetProgress(){
+  state.points=0;state.coins=0;state.totalXP=0;state.badges={};state.questionTokens=1;
+  saveState();updateHubStats();showScreen('hub-screen');
+}
+
+// ===== BG ANIMATION =====
+function initBg(){
+  const canvas=document.getElementById('bg-canvas'),ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  const particles=[];for(let i=0;i<50;i++)particles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*2+.5,speed:Math.random()*.3+.1,opacity:Math.random()*.3+.1});
+  function anim(){ctx.clearRect(0,0,canvas.width,canvas.height);for(const p of particles){p.y-=p.speed;if(p.y<-10){p.y=canvas.height+10;p.x=Math.random()*canvas.width}ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(240,185,11,${p.opacity})`;ctx.fill()}for(let i=0;i<particles.length;i++)for(let j=i+1;j<particles.length;j++){const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<100){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`rgba(0,212,255,${.03*(1-dist/100)})`;ctx.stroke()}}requestAnimationFrame(anim)}anim();
+  window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight});
+}
+
+// ===== INIT =====
+loadState();initBg();renderCharacters();updateHubStats();
+console.log('🇽🇰 Shkolla Digjitale ready! — shkolladigjitale.com');
+console.log('Characters: ☀️ Sunny | 🌪️ Storm | ⚡ Thunder | 🌧️ Rain');
+console.log('Flow: Play game → Earn token → Ask question → Get real answers!');
+</script>
+</body>
+</html>
